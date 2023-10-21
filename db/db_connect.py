@@ -1,7 +1,5 @@
-import os
-import hashlib
+from typing import Tuple
 
-from psycopg2 import Binary
 from sqlalchemy import create_engine, text as sql_text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -40,7 +38,7 @@ def exec_without_resp(query: str, printing: bool = False) -> bool:
 
 
 # выполнение SQL запроса с отдачей
-def exec_with_resp(query: str, printing: bool = False) -> (bool, list):
+def exec_with_resp(query: str, printing: bool = False) -> Tuple[bool, list]:
     alright = False
     result = []
 
@@ -72,7 +70,7 @@ def prepare_tables():
     # создание таблицы продуктов
     create_query2 = '''CREATE TABLE IF NOT EXISTS product (
 id SERIAL NOT NULL PRIMARY KEY,
-name VARCHAR(50) NOT NULL,
+name VARCHAR(50) NOT NULL UNIQUE,
 category category NOT NULL);'''
     exec_without_resp(query=create_query2, printing=False)
 
@@ -80,59 +78,167 @@ category category NOT NULL);'''
     create_query3 = '''
 CREATE TABLE IF NOT EXISTS rzd_user (
 id SERIAL NOT NULL PRIMARY KEY,
-passport BYTEA NOT NULL,
-ticket_num BYTEA NOT NULL,
+passport VARCHAR(10) NOT NULL UNIQUE,
+ticket_num VARCHAR(15) NOT NULL UNIQUE,
 train VARCHAR(10) NOT NULL,
 num_carriage INT NOT NULL,
 type_carriage VARCHAR(10) NOT NULL,
-place INT NOT NULL,
-salt BYTEA NOT NULL);'''
+place INT NOT NULL);'''
     exec_without_resp(query=create_query3, printing=False)
 
     # создание таблицы ТГ юзера
     create_query4 = '''CREATE TABLE IF NOT EXISTS tg_user (
 id SERIAL NOT NULL PRIMARY KEY,
-tg_id BIGINT NOT NULL,
-rzd_user INT NOT NULL,
-FOREIGN KEY (rzd_user) REFERENCES rzd_user(id) ON DELETE CASCADE);'''
+tg_id BIGINT NOT NULL UNIQUE,
+rzd_user VARCHAR(10) NOT NULL UNIQUE,
+FOREIGN KEY (rzd_user) REFERENCES rzd_user(passport) ON DELETE CASCADE);'''
     exec_without_resp(query=create_query4, printing=False)
 
 
 # добавление пассажира в БД
-def add_rzd_user(passport: int, ticket_num: int, train: str, num_carriage: int, type_carriage: str, place: int) -> bool:
-    # создание соли для хеширования
-    salt = os.urandom(16)
-    # хеширование серии-номера паспорта
-    hash_passport = hashlib.pbkdf2_hmac(
-        'sha256',
-        str(passport).encode('utf-8'),
-        salt,
-        100000
-    )
-    # хеширование номера билета
-    hash_ticket_num = hashlib.pbkdf2_hmac(
-        'sha256',
-        str(ticket_num).encode('utf-8'),
-        salt,
-        100000
-    )
+def add_rzd_user(passport: str, ticket_num: str, train: str, num_carriage: int, type_carriage: str, place: int) -> bool:
+    # создание SQL запроса
+    insert_query = f'''INSERT INTO rzd_user (passport, ticket_num, train, num_carriage, type_carriage, place)
+VALUES ('{passport}', '{ticket_num}', '{train}', {num_carriage}, '{type_carriage}', {place});'''
 
-    insert_query = f'''INSERT INTO rzd_user (passport, ticket_num, train, num_carriage, type_carriage, place, salt)
-VALUES ({Binary(hash_passport)}, {Binary(hash_ticket_num)}, '{train}', {num_carriage}, '{type_carriage}', {place}, {Binary(salt)});'''
+    alright = exec_without_resp(query=insert_query, printing=False)
+    return alright
 
-    print(insert_query)
-    result = exec_without_resp(query=insert_query, printing=True)
-    return result
+
+# добавление ТГ юзера в БД
+def add_tg_user(tg_id: int, rzd_user: str) -> bool:
+    # создание SQL запроса
+    insert_query = f'''INSERT INTO tg_user (tg_id, rzd_user)
+VALUES ({tg_id}, {rzd_user});'''
+
+    alright = exec_without_resp(query=insert_query, printing=False)
+    return alright
+
+
+# добавление продукта в БД
+def add_product(name: str, category: str) -> bool:
+    # создание SQL запроса
+    insert_query = f'''INSERT INTO product (name, category)
+VALUES ('{name}', '{category}');'''
+
+    alright = exec_without_resp(query=insert_query, printing=False)
+    return alright
+
+
+# обновление информации о поезде пассажира
+def update_rzd_user_train(passport: str, ticket_num: str, train: str, num_carriage: int, type_carriage: str, place: int) -> bool:
+    # создание SQL запроса
+    update_query = f'''UPDATE rzd_user SET
+ticket_num = '{ticket_num}',
+train = '{train}',
+num_carriage = {num_carriage},
+type_carriage = '{type_carriage}',
+place = {place} WHERE passport = '{passport}';'''
+
+    alright = exec_without_resp(query=update_query, printing=True)
+    return alright
+
+
+# получение продукта из БД
+def get_product(table_id: int) -> bool:
+    # создание SQL запроса
+    select_query = f'''SELECT name, category FROM product WHERE id = {table_id};'''
+
+    alright, found = exec_with_resp(query=select_query, printing=False)
+
+    if found:
+        res = {'name': found[0][0], 'category': found[0][1]}
+        return res
+    else:
+        return None
+
+
+# получение инфы о пассажире по его паспорту или номеру билета
+def get_passenger_info(passport: str = None, ticket_num: str = None) -> int | None:
+    # создание SQL запроса
+
+    if passport:
+        select_query = f'''SELECT * FROM rzd_user WHERE passport = '{passport}';'''
+    else:
+        select_query = f'''SELECT * FROM rzd_user WHERE passport = '{ticket_num}';'''
+
+    alright, found = exec_with_resp(query=select_query, printing=False)
+
+    if found:
+        res = {
+            'id': found[0][0],
+            'passport': found[0][1],
+            'ticket_num': found[0][2],
+            'train': found[0][3],
+            'num_carriage': found[0][4],
+            'type_carriage': found[0][5],
+            'place': found[0][5]
+        }
+        return res
+    else:
+        return None
 
 
 if __name__ == '__main__':
     # prepare_tables()
+    #
     # add_rzd_user(
-    #     passport=5432154321,
-    #     ticket_num=90129012901290,
-    #     train='31EG',
-    #     num_carriage=5,
-    #     type_carriage='4H',
-    #     place=11,
+    #     passport='9876543210',
+    #     ticket_num='89898989898989',
+    #     train='13F',
+    #     num_carriage=32,
+    #     type_carriage='1R',
+    #     place=23,
     # )
-    pass
+    # add_rzd_user(
+    #     passport='1234567890',
+    #     ticket_num='48484848484848',
+    #     train='131H',
+    #     num_carriage=26,
+    #     type_carriage='2H',
+    #     place=37,
+    # )
+    # add_rzd_user(
+    #     passport='5432154321',
+    #     ticket_num='12312312312312',
+    #     train='45E',
+    #     num_carriage=5,
+    #     type_carriage='3E',
+    #     place=7,
+    # )
+    #
+    print(
+        get_passenger_info(passport='1234567890')
+    )
+    #
+    # add_tg_user(tg_id=34567, rzd_user='1234567890')
+    # add_tg_user(tg_id=12345, rzd_user='5432154321')
+    # add_tg_user(tg_id=643254928, rzd_user='9876543210')
+    #
+    # add_product(name='Апельсин', category='food')
+    # add_product(name='Черноголовка', category='drink')
+    # add_product(name='Картошка', category='food')
+    #
+    print(
+        get_product(table_id=3)
+    )
+    print(
+        get_product(table_id=2)
+    )
+    # update_rzd_user_train(
+    #     passport='1234567890',
+    #     ticket_num='62626262626262',
+    #     train='130H',
+    #     num_carriage=20,
+    #     type_carriage='3E',
+    #     place=17,
+    # )
+
+
+
+
+
+
+
+
+# история
