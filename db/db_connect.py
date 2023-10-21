@@ -94,6 +94,16 @@ rzd_user VARCHAR(10) NOT NULL UNIQUE,
 FOREIGN KEY (rzd_user) REFERENCES rzd_user(passport) ON DELETE CASCADE);'''
     exec_without_resp(query=create_query4, printing=False)
 
+    # создание таблицы истории покупок
+    create_query4 = '''CREATE TABLE IF NOT EXISTS pay_history (
+id SERIAL NOT NULL PRIMARY KEY,
+customer INT NOT NULL,
+product INT NOT NULL,
+datetime TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, 
+FOREIGN KEY (customer) REFERENCES tg_user(id) ON DELETE CASCADE,
+FOREIGN KEY (product) REFERENCES product(id) ON DELETE CASCADE);'''
+    exec_without_resp(query=create_query4, printing=True)
+
 
 # добавление пассажира в БД
 def add_rzd_user(passport: str, ticket_num: str, train: str, num_carriage: int, type_carriage: str, place: int) -> bool:
@@ -120,6 +130,16 @@ def add_product(name: str, category: str) -> bool:
     # создание SQL запроса
     insert_query = f'''INSERT INTO product (name, category)
 VALUES ('{name}', '{category}');'''
+
+    alright = exec_without_resp(query=insert_query, printing=False)
+    return alright
+
+
+# добавление покупки в историю
+def add_pay_to_history(customer: int, product: int) -> bool:
+    # создание SQL запроса
+    insert_query = f'''INSERT INTO pay_history (customer, product)
+VALUES ({customer}, {product});'''
 
     alright = exec_without_resp(query=insert_query, printing=False)
     return alright
@@ -160,7 +180,7 @@ def get_passenger_info(passport: str = None, ticket_num: str = None) -> int | No
     if passport:
         select_query = f'''SELECT * FROM rzd_user WHERE passport = '{passport}';'''
     else:
-        select_query = f'''SELECT * FROM rzd_user WHERE passport = '{ticket_num}';'''
+        select_query = f'''SELECT * FROM rzd_user WHERE ticket_num = '{ticket_num}';'''
 
     alright, found = exec_with_resp(query=select_query, printing=False)
 
@@ -207,9 +227,9 @@ if __name__ == '__main__':
     #     place=7,
     # )
     #
-    print(
-        get_passenger_info(passport='1234567890')
-    )
+    # print(
+    #     get_passenger_info(passport='1234567890')
+    # )
     #
     # add_tg_user(tg_id=34567, rzd_user='1234567890')
     # add_tg_user(tg_id=12345, rzd_user='5432154321')
@@ -219,12 +239,12 @@ if __name__ == '__main__':
     # add_product(name='Черноголовка', category='drink')
     # add_product(name='Картошка', category='food')
     #
-    print(
-        get_product(table_id=3)
-    )
-    print(
-        get_product(table_id=2)
-    )
+    # print(
+    #     get_product(table_id=3)
+    # )
+    # print(
+    #     get_product(table_id=2)
+    # )
     # update_rzd_user_train(
     #     passport='1234567890',
     #     ticket_num='62626262626262',
@@ -233,12 +253,6 @@ if __name__ == '__main__':
     #     type_carriage='3E',
     #     place=17,
     # )
-
-
-
-
-
-
-
-
-# история
+    # add_pay_to_history(customer=1, product=2)
+    # add_pay_to_history(customer=3, product=3)
+    pass
