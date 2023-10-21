@@ -1,7 +1,8 @@
-from doctr.io import DocumentFile
-from doctr.models import ocr_predictor
-import re
 import os
+import re
+
+from doctr.models import ocr_predictor
+from doctr.io import DocumentFile
 
 
 class FindPassportData:
