@@ -1,1 +1,1 @@
-4511 373914
+'KIEPage' object has no attribute 'blocks'
