@@ -35,7 +35,7 @@ class FindPassportData:
 
 
 if __name__ == "__main__":
-    for filename in os.listdir('passport_img'):
+    for filename in os.listdir('../passport_img'):
         filepath = f'passport_img/{filename}'
         with open(f'passport_result/{filename.split(".")[0]}.txt', 'w') as file:
             file.write(FindPassportData(filepath=filepath).start())

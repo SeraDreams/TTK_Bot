@@ -1,4 +1,3 @@
-import os
 import re
 
 from doctr.models import ocr_predictor
@@ -34,8 +33,8 @@ class FindTicketData:
                         # Проверка содержит ли num_ticket_clear номер билета
                         if (len(num_ticket_clear) == 13 or len(num_ticket_clear) == 14) and num_ticket_clear.isdigit():
                             return num_ticket_clear
-        except Exception as e:
-            return str(e)
+        except:
+            return 'Не удалось распознать номер билета, пожалуйста отправьте фото повторно или введите номер вручную'
 
     @staticmethod
     def check_filepath(f):
@@ -44,12 +43,12 @@ class FindTicketData:
         return f
 
 
-if __name__ == "__main__":
-    # Чтение файлов из директории check_img
-    for filename in os.listdir('check_img'):
-        # Создание пути до файла в директории
-        filepath = f'check_img/{filename}'
-        # Создание отчёт файла и помещение его в директорию check_result
-        with open(f'check_result/{filename.split(".")[0]}.txt', 'w') as file:
-            # Запись данных в файл с запросом на их получение и передачи пути для обрабатываемого файла
-            file.write(FindTicketData(filepath=filepath).start())
+# if __name__ == "__main__":
+#     # Чтение файлов из директории check_img
+#     # for filename in os.listdir('check_img'):
+#     #     # Создание пути до файла в директории
+#     #     filepath = f'check_img/{filename}'
+#     #     # Создание отчёт файла и помещение его в директорию check_result
+#     #     with open(f'check_result/{filename.split(".")[0]}.txt', 'w') as file:
+#     #         # Запись данных в файл с запросом на их получение и передачи пути для обрабатываемого файла
+#     #         file.write(FindTicketData(filepath=filepath).start())

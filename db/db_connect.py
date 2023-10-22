@@ -159,6 +159,19 @@ place = {place} WHERE passport = '{passport}';'''
     return alright
 
 
+# получение tg_id юзера
+def check_tg_user(tg_id: int) -> bool:
+    # создание SQL запроса
+    select_query = f'''SELECT * FROM tg_user WHERE tg_id = {tg_id};'''
+
+    alright, found = exec_with_resp(query=select_query, printing=False)
+
+    # print(found)
+    if found:
+        return True
+    return False
+
+
 # получение продукта из БД
 def get_product(table_id: int) -> bool:
     # создание SQL запроса
