@@ -187,7 +187,7 @@ def get_product(table_id: int) -> bool:
 
 
 # получение инфы о пассажире по его паспорту или номеру билета
-def get_passenger_info(passport: str = None, ticket_num: str = None) -> int | None:
+def get_passenger_info(passport: str = None, ticket_num: str = None) -> dict | None:
     # создание SQL запроса
 
     if passport:
@@ -213,8 +213,6 @@ def get_passenger_info(passport: str = None, ticket_num: str = None) -> int | No
 
 
 if __name__ == '__main__':
-    # prepare_tables()
-    #
     # add_rzd_user(
     #     passport='9876543210',
     #     ticket_num='89898989898989',
@@ -223,49 +221,25 @@ if __name__ == '__main__':
     #     type_carriage='1R',
     #     place=23,
     # )
+
+    # # passport - img_1.png
+    # # ticket - photo_2023-10-20_14-09-59 (2).jpg
+    add_rzd_user(
+        passport='1104000000',
+        ticket_num='31633461289261',
+        train='131H',
+        num_carriage=26,
+        type_carriage='2H',
+        place=37,
+    )
+
+    # # passport - img_5.png
+    # # ticket - img_4.png
     # add_rzd_user(
-    #     passport='1234567890',
-    #     ticket_num='48484848484848',
-    #     train='131H',
-    #     num_carriage=26,
-    #     type_carriage='2H',
-    #     place=37,
+    #     passport='6019767612',
+    #     ticket_num='78994443225102',
+    #     train='17R',
+    #     num_carriage=32,
+    #     type_carriage='2E',
+    #     place=8,
     # )
-    # add_rzd_user(
-    #     passport='5432154321',
-    #     ticket_num='12312312312312',
-    #     train='45E',
-    #     num_carriage=5,
-    #     type_carriage='3E',
-    #     place=7,
-    # )
-    #
-    # print(
-    #     get_passenger_info(passport='1234567890')
-    # )
-    #
-    # add_tg_user(tg_id=34567, rzd_user='1234567890')
-    # add_tg_user(tg_id=12345, rzd_user='5432154321')
-    # add_tg_user(tg_id=643254928, rzd_user='9876543210')
-    #
-    # add_product(name='Апельсин', category='food')
-    # add_product(name='Черноголовка', category='drink')
-    # add_product(name='Картошка', category='food')
-    #
-    # print(
-    #     get_product(table_id=3)
-    # )
-    # print(
-    #     get_product(table_id=2)
-    # )
-    # update_rzd_user_train(
-    #     passport='1234567890',
-    #     ticket_num='62626262626262',
-    #     train='130H',
-    #     num_carriage=20,
-    #     type_carriage='3E',
-    #     place=17,
-    # )
-    # add_pay_to_history(customer=1, product=2)
-    # add_pay_to_history(customer=3, product=3)
-    pass

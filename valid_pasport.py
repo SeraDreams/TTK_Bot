@@ -9,108 +9,90 @@ from buttons.keyboard import keyboard_select
 import db.db_connect as db
 from ticket import FindTicketData
 
+
 class PassportTicket(StatesGroup):
     passport = State()
     ticket = State()
     select = State()
 
 
-async def start(message: types.Message):
+async def start(message: types.Message, state: FSMContext):
+    await state.finish()
+
     user_id = message.from_user.id
     if db.check_tg_user(user_id):
-        await bot.send_message('Привет! Я ТЕБЯ БЛЯТЬ ЗНАЮ!')
+        await message.answer('Привет! Я тебя знаю!')
+        await message.answer('Выбери что будем проверять', reply_markup=keyboard_select)
         await PassportTicket.select.set()
     else:
-        await bot.send_message('Привет! Я ТЕБЯ БЛЯТЬ Запомнил!')
+        await message.answer('Привет! Я тебя не знаю!')
+        await message.answer('Выбери что будем проверять', reply_markup=keyboard_select)
         await PassportTicket.select.set()
 
 
-async def recognition_selection():
-    await bot.send_message('выбери что будем проверякать', reply_markup=keyboard_select)
+async def ticket_or_passport(message: types.Message, state: FSMContext):
+    await state.update_data(select=message.text)
+    # получаем сохранённое состояние
+    state_data = await state.get_data()
 
-
-async def ticket(message: types.Message, state: FSMContext):
-    await bot.send_message('Отправь билет')
+    if state_data['select'] == 'Билет':
+        await message.answer('Отправь билет')
+        await PassportTicket.ticket.set()
+    elif state_data['select'] == 'Паспорт':
+        await message.answer('Отправь паспорт')
+        await PassportTicket.passport.set()
 
 
 async def get_ticket(message: types.Message, state: FSMContext):
-    # FindTicketData
-    user_id = message.from_user.id
-    await message.photo[-1].download(destination_file=f"check_img/{user_id}.jpg")
+    try:
+        user_id = message.from_user.id
+        await message.photo[-1].download(destination_file=f"check_img/{user_id}.jpg")
 
-    data = FindTicketData(filepath=f"check_img/{user_id}t.jpg").start()
-    os.remove(f"check_img/{user_id}.jpg")
-    getticket = db.get_passenger_info(ticket_num=data)
-    if getticket:
-        await bot.send_message(f'билета eсть в базе вот вваши данные \n {getticket}')
-    else:
-        await bot.send_message('билета нету в базе')
+        data = FindTicketData(filepath=f"check_img/{user_id}.jpg").start()
+        os.remove(f"check_img/{user_id}.jpg")
+        info_using_ticket = db.get_passenger_info(ticket_num=data)
 
-
-async def passport(message: types.Message, state: FSMContext):
-    await bot.send_message('Отправь паспорт')
+        print(data)
+        if info_using_ticket:
+            await message.answer(f'''Билет eсть в базе, вот ваши данные
+            Поезд: {info_using_ticket['train']}
+            Номер вагона: {info_using_ticket['num_carriage']}
+            Тип вагона: {info_using_ticket['type_carriage']}
+            Место: {info_using_ticket['place']}''')
+            db.add_tg_user(tg_id=user_id, rzd_user=info_using_ticket["id"])
+        else:
+            await message.answer('Билета нету в базе')
+    except Exception as e:
+        print(e)
+    await state.finish()
 
 
 async def get_passport(message: types.Message, state: FSMContext):
-    # FindTicketData
-    user_id = message.from_user.id
-    await message.photo[-1].download(destination_file=f"passport_img/{user_id}.jpg")
+    try:
+        user_id = message.from_user.id
+        await message.photo[-1].download(destination_file=f"passport_img/{user_id}.jpg")
 
-    data = recognize_passport(f"passport_img/{user_id}.jpg", user_id)
-    os.remove(f"passport_img/{user_id}.jpg")
-    getticket = db.get_passenger_info(passport=data['Номер']+data['Серия'])
-    if getticket:
-        await bot.send_message(f'паспорт eсть в базе вот вваши данные \n {getticket}')
-    else:
-        await bot.send_message('паспорт нету в базе')
+        data = recognize_passport(f"passport_img/{user_id}.jpg", user_id)
+        os.remove(f"passport_img/{user_id}.jpg")
+        info_using_passport = db.get_passenger_info(passport=data['Серия']+data['Номер'])
 
-
-# async def passport_start(message: types.Message):
-#     await bot.send_photo(photo=open("img.png", "rb"), chat_id=message.from_user.id, caption="Отправьте фото паспорта, по такому примеру")
-#     await PassportImg.img.set()
-#
-#
-# async def take_passport_img(message: types.Message, state: FSMContext):
-#     async with state.proxy() as q:
-#         id = message.from_user.id
-#         await message.photo[-1].download(destination_file=f"user_pasport/{id}.jpg")
-#
-#         global data
-#         global reply_answer
-#         delete = await message.reply('Фото обрабатывается')
-#         data = recognize_passport(f"user_pasport/{id}.jpg", id)
-#         answer_text = f"<b>Пожалуйста проверти данные:</b>\nИмя - {data['Имя']}\nФамилия - {data['Фамилия']}\nОтчество - {data['Отчество']}\nНомер - {data['Номер']}\nСерия - {data['Серия']}\n\nЧтобы изменить данные отправьте Пункт - На какое значение изменить"
-#         await delete.delete()
-#         reply_answer = await message.answer(answer_text, parse_mode="HTML", reply_markup=just_bt)
-#         await state.finish()
-#
-#
-# async def edit_data(message: types.Message):
-#     try:
-#         msg = message.text
-#         print(msg.split('-')[0].replace(" ", ""), data.keys())
-#         if msg.split('-')[0].replace(" ", "") in data.keys():
-#             data[msg.split('-')[0].replace(" ", "")] = msg.split('-')[1].replace(" ", "")
-#             await message.reply("Значение успешно обновлено!")
-#             answer_text = f"<b>Пожалуйста проверти данные:</b>\nИмя - {data['Имя']}\nФамилия - {data['Фамилия']}\nОтчество - {data['Отчество']}\nНомер - {data['Номер']}\nСерия - {data['Серия']}\n\nЧтобы изменить данные отправьте Пункт - На какое значение изменить"
-#             await message.answer(answer_text, parse_mode="HTML", reply_markup=just_bt)
-#         elif msg == "Данные верны":
-#             # Сохранение в БД или куда там блять надо
-#             await message.answer("Меню:")
-#         elif msg.count('-') == 1:
-#             await message.reply("Такого пункта не сушествует")
-#     except:
-#         pass
-#
-#
-
-
+        print(data)
+        if info_using_passport:
+            await message.answer(f'''Паспорт eсть в базе, вот ваши данные
+    Поезд: {info_using_passport['train']}
+    Номер вагона: {info_using_passport['num_carriage']}
+    Тип вагона: {info_using_passport['type_carriage']}
+    Место: {info_using_passport['place']}''')
+            db.add_tg_user(tg_id=user_id, rzd_user=info_using_passport["id"])
+        else:
+            await message.answer('Паспорта нету в базе')
+    except Exception as e:
+        print(e)
+    await state.finish()
 
 
 def reg_hand_valid_passport(dp: Dispatcher):
     dp.register_message_handler(start, commands=['start'])
-    dp.register_message_handler(recognition_selection, state=PassportTicket.select)
-    dp.register_message_handler(ticket, state=PassportTicket.ticket)
-    dp.register_message_handler(ticket, state=PassportTicket.ticket, content_types=['photo'])
-    dp.register_message_handler(passport, state=PassportTicket.passport)
-    dp.register_message_handler(passport, state=PassportTicket.passport, content_types=['photo'])
+    dp.register_message_handler(ticket_or_passport, state=PassportTicket.select)
+    dp.register_message_handler(get_ticket, state=PassportTicket.ticket, content_types=['photo'])
+    dp.register_message_handler(get_passport, state=PassportTicket.passport, content_types=['photo'])
